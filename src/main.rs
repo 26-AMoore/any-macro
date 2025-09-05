@@ -9,8 +9,9 @@ use inputbot::KeybdKey;
 
 fn main() {
 	let (sender, receiver): (Sender<KeyPress>, Receiver<KeyPress>) = mpsc::channel();
-	let control_key = KeybdKey::Numpad9Key;
-	let replay_key = KeybdKey::Numpad7Key;
+	let control_key = KeybdKey::RBracketKey;
+	let replay_key = KeybdKey::LBracketKey;
+	//                   Name       Start    List of presses
 	let mut map: HashMap<KeybdKey, (Instant, Vec<KeyPress>)> = HashMap::new();
 
 	inputbot::KeybdKey::bind_all(move |key: inputbot::KeybdKey| {
@@ -23,6 +24,7 @@ fn main() {
 
 		let press_duration = Instant::now().duration_since(start_time_millis);
 
+		println!("Key: {:?}, Time: {:?}", key, press_duration);
 		// sends a KeyPress to the mpsc
 		match sender.send(KeyPress {
 			start_time: start_time_millis,
@@ -34,20 +36,29 @@ fn main() {
 		}
 	});
 
-	let mut log_next = false;
-	for event in &receiver {
+	let mut log_next = true;
+
+	// main loop
+	for event in receiver {
+		println!("{:?}", event);
 		if event.key.eq(&control_key) {
 			log_next = true;
 		}
 
 		println!("{:?}", event);
+		let mut record = Vec::new();
 		if log_next {
 			map.insert(
 				control_key,
-				(Instant::now(), record(&receiver, control_key)),
+				(Instant::now(), {
+					println!("{:?}", event);
+					record.push(event);
+					record
+				}),
 			);
 			log_next = false;
 		}
+		println!("{:?}", map);
 
 		if !log_next && event.key.eq(&replay_key) {
 			replay(
